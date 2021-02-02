@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
-// import 'package:testresapp/translation_strings.dart';
-// import 'package:testresapp/globals.dart' as globals;
 import 'package:sandy_cay/globals.dart' as globals;
-// import 'package:testresapp/drawerpage.dart';
-// import 'package:testresapp/propertyclass.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:testresapp/shippingaddresspage.dart';
-// import 'package:testresapp/registerpage.dart';
-import 'package:qrscan/qrscan.dart' as scanner;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:sandy_cay/home.dart';
-import 'package:sandy_cay/main.dart';
 
 class LoginPage extends StatefulWidget {
 
@@ -40,8 +30,8 @@ class LoginPageState extends State<LoginPage> {
     super.initState();
 
     globals.makeprogressObject();
-    _unametextController.text = "joe@joec.com";
-    _passtextController.text = "admin123";
+    // _unametextController.text = "joe@joec.com";
+    // _passtextController.text = "admin123";
   }
 
   @override

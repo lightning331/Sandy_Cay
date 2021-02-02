@@ -1,34 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:qrscan/qrscan.dart' as scanner;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sandy_cay/globals.dart' as globals;
-
-// class HomePage extends StatelessWidget {
-//   // This widget is the root of your application.
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Flutter Demo',
-//       theme: ThemeData(
-//         // This is the theme of your application.
-//         //
-//         // Try running your application with "flutter run". You'll see the
-//         // application has a blue toolbar. Then, without quitting the app, try
-//         // changing the primarySwatch below to Colors.green and then invoke
-//         // "hot reload" (press "r" in the console where you ran "flutter run",
-//         // or simply save your changes to "hot reload" in a Flutter IDE).
-//         // Notice that the counter didn't reset back to zero; the application
-//         // is not restarted.
-//         primarySwatch: Colors.blue,
-//         // This makes the visual density adapt to the platform that you run
-//         // the app on. For desktop platforms, the controls will be smaller and
-//         // closer together (more dense) than on mobile platforms.
-//         visualDensity: VisualDensity.adaptivePlatformDensity,
-//       ),
-//       home: MyHomePage(title: 'Sandy Cay'),
-//     );
-//   }
-// }
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.title}) : super(key: key);
@@ -52,13 +29,34 @@ class HomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<HomePage> {
+  final TextEditingController _priceTextController = new TextEditingController();
+  final TextEditingController _amountTextController = new TextEditingController();
   String scanResult = "";
+  String filePath = "";
 
   @override
   void initState() {
     super.initState();
 
     globals.makeprogressObject();
+
+    // _priceTextController.text = "1";
+    _amountTextController.text = "1";
+  }
+
+  chooseImage() async {
+    await Permission.camera.request();
+    final imagePicker = ImagePicker();
+    final pickedFile = await imagePicker.getImage(
+      source: ImageSource.camera,
+    );
+    if (pickedFile != null) {
+      setState(() {
+        filePath = pickedFile.path;
+      });
+    }
+
+    //setStatus('');
   }
 
   Future _scan() async {
@@ -79,31 +77,32 @@ class _MyHomePageState extends State<HomePage> {
 
       globals.showProgressDialog(context);
 
-      Map<String,String> postparam = Map();
-      postparam["barcode"] = scanResult;
-      postparam["name"] = "";
-      postparam["price"] = "";
-      postparam["image"] = "";
-      postparam["color"] = "";
-      postparam["description"] = "";
-      var jsondata = await globals.callPostAPI("store", postparam);
+      //create multipart request for POST or PATCH method
+      var request = http.MultipartRequest("POST", Uri.parse("http://portal.sandycay.com/api/store"));
+      request.fields["barcode"] = scanResult;
+      request.fields["price"] = _priceTextController.text;
+      request.fields["amount"] = _amountTextController.text;
+      //create multipart using filepath, string or bytes
+      var pic = await http.MultipartFile.fromPath("image", filePath);
+      //add multipart to request
+      request.files.add(pic);
+      var response = await request.send();
 
+      //Get the response from the server
+      var responseData = await response.stream.toBytes();
+      var responseString = String.fromCharCodes(responseData);
+      print(responseString);
+      final jsondata = json.decode(responseString.trim());
+
+      globals.dismissDialog(context);
       if(jsondata == null) {
-        globals.dismissDialog(context);
         globals.showDialog1('Please check your internet connectivity', context);
         return;
       }
 
-      globals.dismissDialog(context);
-
-      var msg = "";
       if(jsondata['message'] != null) {
         if(jsondata['message'] == "Success") {
-            msg = "Submitted successfully!";
             globals.showDialog1('Submitted successfully!', context);
-          // Navigator.of(context).push(
-          //     new MaterialPageRoute(builder: (BuildContext context) => HomePage())
-          // );
         }
         else {
           globals.showDialog1('Failed to submit. Please try again!', context);
@@ -122,6 +121,47 @@ class _MyHomePageState extends State<HomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+    TextFormField pricetxt = new TextFormField(
+      decoration: new InputDecoration(
+        labelText: 'Price',
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+        const EdgeInsets.only(left: 14.0, bottom: 5.0, top: 5.0),
+      ),
+      controller: _priceTextController,
+      keyboardType: TextInputType.number,
+      validator: (value) {
+        if (value.trim().isEmpty)
+          return 'Price is required.';
+        return null;
+      },
+    );
+
+    TextFormField amounttxt = new TextFormField(
+      decoration: new InputDecoration(
+        labelText: 'Amount',
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+        const EdgeInsets.only(left: 14.0, bottom: 5.0, top: 5.0),
+      ),
+      controller: _amountTextController,
+      keyboardType: TextInputType.number,
+      validator: (value) {
+        if (value.trim().isEmpty)
+          return 'Amount is required.';
+        return null;
+      },
+    );
+
+    isFormValid() {
+      if (filePath.isNotEmpty && scanResult.isNotEmpty && _priceTextController.text.isNotEmpty && _amountTextController.text.isNotEmpty) {
+        return true;
+      } else {
+        return false;
+      }
+    }
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
@@ -132,7 +172,7 @@ class _MyHomePageState extends State<HomePage> {
         width: MediaQuery.of(context).size.width,
         decoration: BoxDecoration(
           image: DecorationImage(
-            colorFilter: new ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.dstATop),
+            colorFilter: new ColorFilter.mode(Colors.black.withOpacity(0.5), BlendMode.dstATop),
             image: AssetImage("img/bg_app.jpg"),
             fit: BoxFit.fill,
           ),
@@ -141,10 +181,24 @@ class _MyHomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             new ButtonTheme(
-              minWidth: 200,
-              height: 44,
+              minWidth: 150,
+              height: 50,
               child: new FlatButton(
-                child: new Text("Scan", style: TextStyle(fontWeight: FontWeight.bold)),
+                child: new Text(filePath.isEmpty ? "Choose Image" : "Picked", style: TextStyle(fontWeight: FontWeight.bold)),
+                color: Colors.orange,
+                textColor: Colors.white,
+                onPressed: () {
+                  //_scan();
+                  chooseImage();
+                },
+              ),
+            ),
+            new Padding(padding: new EdgeInsets.only(top: 10.0)),
+            new ButtonTheme(
+              minWidth: 150,
+              height: 50,
+              child: new FlatButton(
+                child: new Text(scanResult.isEmpty ? "Barcode Scan" : scanResult, style: TextStyle(fontWeight: FontWeight.bold)),
                 color: Colors.orange,
                 textColor: Colors.white,
                 onPressed: () {
@@ -152,25 +206,35 @@ class _MyHomePageState extends State<HomePage> {
                 },
               ),
             ),
+            new Container(
+                padding: new EdgeInsets.only(top: 10.0),
+                width: 150,
+                child: pricetxt,
+              ),
+            new Container(
+                padding: new EdgeInsets.only(top: 10.0),
+                width: 150,
+                child: amounttxt,
+              ),
             new Padding(padding: new EdgeInsets.only(top: 10.0,),),
-            Text(
-              'result:',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              scanResult,
-              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-            ),
+            // Text(
+            //   'result:',
+            //   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            // ),
+            // Text(
+            //   scanResult,
+            //   style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+            // ),
             new Padding(padding: new EdgeInsets.only(top: 50.0,),),
             new ButtonTheme(
-              minWidth: 100,
+              minWidth: 120,
               height: 44,
               child: new FlatButton(
                 child: new Text("Submit", style: TextStyle(fontWeight: FontWeight.bold)),
-                color: Colors.blue.withOpacity(scanResult.isEmpty ? 0.5 : 1),
+                color: Colors.blue.withOpacity(isFormValid() ? 1 : 0.5),
                 textColor: Colors.white,
                 onPressed: () {
-                  if (scanResult.isEmpty) {
+                  if (!isFormValid()) {
                     return;
                   }
                   onSubmit();
