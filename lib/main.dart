@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:qrscan/qrscan.dart' as scanner;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:sandy_cay/login.dart';
+import 'package:sandy_cay/home.dart';
 import 'package:sandy_cay/globals.dart' as globals;
-//import 'package:sandy_cay/login.dart';
 import 'package:sandy_cay/scoped_wrapper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-Widget homepage = LoginPage();
 
-void main() {
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
 
   globals.localelanguage = 'en';
 
-  globals.page1 = homepage;
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  if (prefs.get('IsLogin') == null || prefs.getBool('IsLogin') == false) {
+    globals.page1 = LoginPage();
+  }
+  else {
+    globals.page1 = HomePage();
+  }
   runApp(ScopedWrapper());
 
 }

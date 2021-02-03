@@ -5,7 +5,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:sandy_cay/globals.dart' as globals;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:sandy_cay/login.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.title}) : super(key: key);
@@ -74,7 +76,6 @@ class _MyHomePageState extends State<HomePage> {
 
   onSubmit() async {
 
-
       globals.showProgressDialog(context);
 
       //create multipart request for POST or PATCH method
@@ -112,6 +113,15 @@ class _MyHomePageState extends State<HomePage> {
         globals.showDialog1('Failed to submit. Please try again!', context);
       }
     }
+
+  onLogout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool('IsLogin', false);
+    Navigator.of(context).pushReplacement(
+        new MaterialPageRoute(builder: (BuildContext context) => LoginPage())
+    );
+
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +190,7 @@ class _MyHomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            new Padding(padding: new EdgeInsets.only(top: 50.0)),
             new ButtonTheme(
               minWidth: 150,
               height: 50,
@@ -217,15 +228,7 @@ class _MyHomePageState extends State<HomePage> {
                 child: amounttxt,
               ),
             new Padding(padding: new EdgeInsets.only(top: 10.0,),),
-            // Text(
-            //   'result:',
-            //   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            // ),
-            // Text(
-            //   scanResult,
-            //   style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-            // ),
-            new Padding(padding: new EdgeInsets.only(top: 50.0,),),
+            new Padding(padding: new EdgeInsets.only(top: 30.0,),),
             new ButtonTheme(
               minWidth: 120,
               height: 44,
@@ -241,7 +244,25 @@ class _MyHomePageState extends State<HomePage> {
                 },
               ),
             ),
-
+            new Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  onLogout();
+                },
+                child: new Align(
+                    // alignment: Alignment.bottomCenter,
+                    child: new Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        new Icon(Icons.logout, color: Colors.white),
+                        new Padding(padding: new EdgeInsets.only(left: 5.0,),),
+                        new Text("LogOut", style: TextStyle(color: Colors.white))
+                      ],
+                    ),
+                ),
+              ),
+            ),
+            new Padding(padding: new EdgeInsets.only(top: 20.0,),),
           ],
         ),
       ),

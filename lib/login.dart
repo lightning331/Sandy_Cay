@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sandy_cay/globals.dart' as globals;
 import 'package:sandy_cay/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
 
@@ -91,6 +92,9 @@ class LoginPageState extends State<LoginPage> {
             // prefs.setString("Company", _userObj.company);
             // globals.IsLogin = true;
             // globals.loginUserObj = LoginUserClass(_userObj.CustomerId, _userObj.company,_userObj.CustomerFirstName,_userObj.CustomerLastName, _userObj.CustomerEmail, _userObj.StreetAddress, _userObj.City, _userObj.Phonecode, _userObj.CustomerPhone, _userObj.ZipCode, _userObj.CCode, _userObj.NLETTER);
+
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setBool('IsLogin', true);
 
             Navigator.of(context).pushReplacement(
                 new MaterialPageRoute(builder: (BuildContext context) => HomePage())
