@@ -4,10 +4,9 @@ import 'package:qrscan/qrscan.dart' as scanner;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sandy_cay/globals.dart' as globals;
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:sandy_cay/login.dart';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.title}) : super(key: key);
@@ -51,6 +50,9 @@ class _MyHomePageState extends State<HomePage> {
     final imagePicker = ImagePicker();
     final pickedFile = await imagePicker.getImage(
       source: ImageSource.camera,
+        imageQuality: 50, // <- Reduce Image quality
+        maxHeight: 500,  // <- reduce the image size
+        maxWidth: 500
     );
     if (pickedFile != null) {
       setState(() {
@@ -78,31 +80,31 @@ class _MyHomePageState extends State<HomePage> {
 
       globals.showProgressDialog(context);
 
-      //create multipart request for POST or PATCH method
-      var request = http.MultipartRequest("POST", Uri.parse("http://portal.sandycay.com/api/store"));
-      request.fields["barcode"] = scanResult;
-      request.fields["price"] = _priceTextController.text;
-      request.fields["amount"] = _amountTextController.text;
-      //create multipart using filepath, string or bytes
-      var pic = await http.MultipartFile.fromPath("image", filePath);
-      //add multipart to request
-      request.files.add(pic);
-      var response = await request.send();
+      String fileName = filePath.split('/').last;
 
-      //Get the response from the server
-      var responseData = await response.stream.toBytes();
-      var responseString = String.fromCharCodes(responseData);
-      print(responseString);
-      final jsondata = json.decode(responseString.trim());
+      FormData data = FormData.fromMap({
+        "image": await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+        ),
+        "barcode": scanResult,
+        "price": _priceTextController.text,
+        "amount": _amountTextController.text,
+      });
 
+      Dio dio = new Dio();
+
+      var response = await dio.post("http://portal.sandycay.com/api/store", data: data);
+
+      print(response);
       globals.dismissDialog(context);
-      if(jsondata == null) {
+      if(response == null) {
         globals.showDialog1('Please check your internet connectivity', context);
         return;
       }
 
-      if(jsondata['message'] != null) {
-        if(jsondata['message'] == "Success") {
+      if(response.data['message'] != null) {
+        if(response.data['message'] == "Success") {
             globals.showDialog1('Submitted successfully!', context);
         }
         else {
@@ -262,7 +264,7 @@ class _MyHomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            new Padding(padding: new EdgeInsets.only(top: 20.0,),),
+            // new Padding(padding: new EdgeInsets.only(top: 20.0,),),
           ],
         ),
       ),
